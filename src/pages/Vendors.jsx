@@ -24,8 +24,8 @@ export default function Vendors() {
   }, []);
 
   return (
-    <div className="p-8 h-full flex flex-col">
-      <header className="flex justify-between items-center mb-8">
+    <div className="p-4 md:p-8 h-full flex flex-col">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Vendors</h1>
           <p className="text-gray-500 mt-1">Manage your suppliers and vendors.</p>
@@ -35,14 +35,14 @@ export default function Vendors() {
             setEditingVendor(null);
             setShowAddModal(true);
           }}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-600/20 transition-all flex items-center justify-center gap-2 group w-full md:w-auto"
         >
           <Plus className="group-hover:rotate-90 transition-transform" />
           Add Vendor
         </button>
       </header>
 
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 relative">
+      <div className="bg-white p-4 max-w-full rounded-2xl shadow-sm border border-gray-100 mb-6 relative">
         <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <input 
           type="text" 
@@ -127,7 +127,7 @@ function VendorModal({ onClose, onSuccess, vendor }) {
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-y-auto max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-900">{vendor ? 'Edit Vendor' : 'Add New Vendor'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>

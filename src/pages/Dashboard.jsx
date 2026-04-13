@@ -32,7 +32,7 @@ export default function Dashboard() {
   const lowStockItems = inventory.filter(item => item.stockQty < 10);
 
   return (
-    <div className="p-8 space-y-8 h-full">
+    <div className="p-4 md:p-8 space-y-6 md:space-y-8 h-full">
       <header>
         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Overview</h1>
         <p className="text-gray-500 mt-1">Here's what's happening today.</p>

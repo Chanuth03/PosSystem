@@ -111,22 +111,22 @@ export default function POS() {
   };
 
   return (
-    <div className="flex h-full bg-slate-50">
+    <div className="flex flex-col md:flex-row h-[calc(100vh-64px)] md:h-full bg-slate-50">
       {/* Product Selection Area */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden p-6 gap-6">
-        <header className="flex justify-between items-center bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-          <div>
+      <div className="flex-1 flex flex-col h-1/2 md:h-full overflow-hidden p-4 md:p-6 gap-4 md:gap-6">
+        <header className="flex flex-col md:flex-row justify-between items-center gap-4 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
+          <div className="w-full md:w-auto text-center md:text-left">
             <h1 className="text-2xl font-bold text-gray-800">Point of Sale</h1>
           </div>
-          <div className="flex gap-2 p-1 bg-gray-100 rounded-xl">
+          <div className="flex w-full md:w-auto gap-2 p-1 bg-gray-100 rounded-xl overflow-hidden">
             <button
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${saleType === 'retail' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-semibold transition-all ${saleType === 'retail' ? 'bg-white text-blue-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => setSaleType('retail')}
             >
               Retail
             </button>
             <button
-              className={`px-6 py-2 rounded-lg font-semibold transition-all ${saleType === 'wholesale' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
+              className={`flex-1 md:flex-none px-6 py-2 rounded-lg font-semibold transition-all ${saleType === 'wholesale' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => setSaleType('wholesale')}
             >
               Wholesale
@@ -146,7 +146,7 @@ export default function POS() {
         </div>
 
         <div className="flex-1 overflow-y-auto pb-4">
-          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {inventoryItems.map(item => (
               <button
                 key={item.id}
@@ -174,8 +174,8 @@ export default function POS() {
       </div>
 
       {/* Cart Area */}
-      <div className="w-96 bg-white border-l border-gray-200 shadow-xl flex flex-col z-10">
-        <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+      <div className="w-full md:w-96 bg-white border-t md:border-t-0 md:border-l border-gray-200 shadow-xl flex flex-col z-10 h-1/2 md:h-full">
+        <div className="p-4 md:p-6 border-b border-gray-100 flex items-center gap-3">
           <div className="w-10 h-10 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center">
             <ShoppingCart size={20} />
           </div>
@@ -213,8 +213,8 @@ export default function POS() {
           )}
         </div>
 
-        <div className="p-6 bg-white border-t border-gray-100 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
-          <div className="space-y-3 mb-6">
+        <div className="p-4 md:p-6 bg-white border-t border-gray-100 shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)]">
+          <div className="space-y-2 md:space-y-3 mb-4 md:mb-6">
             <div className="flex justify-between items-center">
               <span className="text-gray-500">Subtotal</span>
               <span className="font-semibold">Rs.{subtotal.toFixed(2)}</span>
