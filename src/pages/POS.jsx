@@ -1,7 +1,8 @@
-import React, { useState, useMemo } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import React, { useState, useMemo, useEffect } from 'react';
+import axios from 'axios';
 import { ShoppingCart, Search, Trash2, Tag, CreditCard, CheckCircle } from 'lucide-react';
+
+const API_URL = 'http://localhost:5000/api';
 
 export default function POS() {
   const [cart, setCart] = useState([]);
@@ -10,9 +11,25 @@ export default function POS() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
-  // Fetch products and their variants (inventory details)
-  const products = useLiveQuery(() => db.products.toArray()) || [];
-  const inventory = useLiveQuery(() => db.inventory.toArray()) || [];
+  const [products, setProducts] = useState([]);
+  const [inventory, setInventory] = useState([]);
+
+  const fetchData = async () => {
+    try {
+      const [prodRes, invRes] = await Promise.all([
+        axios.get(`${API_URL}/products`),
+        axios.get(`${API_URL}/inventory`)
+      ]);
+      setProducts(prodRes.data);
+      setInventory(invRes.data);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
 
   const inventoryItems = useMemo(() => {
     return inventory.map(inv => {
@@ -26,7 +43,7 @@ export default function POS() {
     }).filter(item =>
       item.productName &&
       (item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        item.sku.toLowerCase().includes(searchQuery.toLowerCase()))
+       (item.sku && item.sku.toLowerCase().includes(searchQuery.toLowerCase())))
     );
   }, [inventory, products, searchQuery]);
 
@@ -72,31 +89,24 @@ export default function POS() {
 
     try {
       // Create Sale Record
-      await db.sales.add({
-        date: new Date().toISOString(),
+      await axios.post(`${API_URL}/sales`, {
         totalAmount: total,
         discount: discountAmount,
-        type: saleType,
-        items: cart.map(c => ({
-          inventoryId: c.inventoryId,
-          qty: c.qty,
-          price: saleType === 'retail' ? c.retailPrice : c.wholesalePrice
-        }))
+        type: saleType
       });
 
       // Update Inventory Quantities
-      for (let item of cart) {
-        const invRecord = await db.inventory.get(item.inventoryId);
-        if (invRecord) {
-          await db.inventory.update(item.inventoryId, { stockQty: invRecord.stockQty - item.qty });
-        }
-      }
+      await Promise.all(cart.map(item => 
+        axios.put(`${API_URL}/inventory/${item.inventoryId}/deduct`, { qty: item.qty })
+      ));
 
       setCart([]);
       setShowSuccess(true);
+      fetchData(); // Refresh inventory after sale
       setTimeout(() => setShowSuccess(false), 3000);
     } catch (error) {
       console.error("Checkout failed:", error);
+      alert("Checkout failed. Check console.");
     }
   };
 
@@ -154,7 +164,7 @@ export default function POS() {
                 <p className="text-sm text-gray-500 mb-3">{item.size} • {item.color}</p>
                 <div className="flex justify-between items-end">
                   <span className="text-lg font-black text-gray-900">
-                    Rs.{(saleType === 'retail' ? item.retailPrice : item.wholesalePrice).toFixed(2)}
+                    Rs.{(saleType === 'retail' ? Number(item.retailPrice) : Number(item.wholesalePrice)).toFixed(2)}
                   </span>
                 </div>
               </button>
@@ -195,7 +205,7 @@ export default function POS() {
                     <Trash2 size={16} />
                   </button>
                   <span className="font-bold text-gray-900">
-                    Rs.{(item.qty * (saleType === 'retail' ? item.retailPrice : item.wholesalePrice)).toFixed(2)}
+                    Rs.{(item.qty * (saleType === 'retail' ? Number(item.retailPrice) : Number(item.wholesalePrice))).toFixed(2)}
                   </span>
                 </div>
               </div>

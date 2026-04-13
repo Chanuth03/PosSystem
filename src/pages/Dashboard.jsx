@@ -1,14 +1,33 @@
-import React from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 import { TrendingUp, AlertTriangle, DollarSign, PackageOpen, ShoppingCart } from 'lucide-react';
 
+const API_URL = 'http://localhost:5000/api';
+
 export default function Dashboard() {
-  const sales = useLiveQuery(() => db.sales.toArray()) || [];
-  const inventory = useLiveQuery(() => db.inventory.toArray()) || [];
+  const [sales, setSales] = useState([]);
+  const [inventory, setInventory] = useState([]);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [salesRes, invRes] = await Promise.all([
+          axios.get(`${API_URL}/sales`),
+          axios.get(`${API_URL}/inventory`)
+        ]);
+        setSales(salesRes.data);
+        setInventory(invRes.data);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+      }
+    };
+    fetchData();
+  }, []);
 
   const todaySales = sales.filter(s => new Date(s.date).toDateString() === new Date().toDateString());
-  const dailyRevenue = todaySales.reduce((acc, curr) => acc + curr.totalAmount, 0);
+  const dailyRevenue = todaySales.reduce((acc, curr) => acc + Number(curr.totalAmount), 0);
 
   const lowStockItems = inventory.filter(item => item.stockQty < 10);
 
@@ -93,13 +112,19 @@ export default function Dashboard() {
         <div className="col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
           <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
           <div className="space-y-3">
-            <button className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-blue-50 group transition-all text-blue-700 bg-blue-50/50 font-medium">
+            <button 
+              onClick={() => navigate('/pos')}
+              className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-blue-50 group transition-all text-blue-700 bg-blue-50/50 font-medium"
+            >
               <div className="bg-blue-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
                 <ShoppingCart size={18} />
               </div>
               New Sale
             </button>
-            <button className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-indigo-50 group transition-all text-indigo-700 bg-indigo-50/50 font-medium">
+            <button 
+              onClick={() => navigate('/inventory')}
+              className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-indigo-50 group transition-all text-indigo-700 bg-indigo-50/50 font-medium"
+            >
               <div className="bg-indigo-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
                 <PackageOpen size={18} />
               </div>

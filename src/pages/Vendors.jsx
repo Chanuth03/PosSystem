@@ -1,11 +1,27 @@
-import React, { useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '../db';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Users, Plus, Phone, Search } from 'lucide-react';
 
+const API_URL = 'http://localhost:5000/api';
+
 export default function Vendors() {
-  const vendors = useLiveQuery(() => db.vendors.toArray()) || [];
+  const [vendors, setVendors] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [editingVendor, setEditingVendor] = useState(null);
+
+  // Fetch vendors from the backend API
+  const fetchVendors = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/vendors`);
+      setVendors(response.data);
+    } catch (error) {
+      console.error("Error fetching vendors:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchVendors();
+  }, []);
 
   return (
     <div className="p-8 h-full flex flex-col">
@@ -15,7 +31,10 @@ export default function Vendors() {
           <p className="text-gray-500 mt-1">Manage your suppliers and vendors.</p>
         </div>
         <button 
-          onClick={() => setShowAddModal(true)}
+          onClick={() => {
+            setEditingVendor(null);
+            setShowAddModal(true);
+          }}
           className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-xl font-medium shadow-lg shadow-indigo-600/20 transition-all flex items-center gap-2 group"
         >
           <Plus className="group-hover:rotate-90 transition-transform" />
@@ -46,7 +65,13 @@ export default function Vendors() {
                 <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl uppercase">
                   {vendor.name.charAt(0)}
                 </div>
-                <button className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button 
+                  onClick={() => {
+                    setEditingVendor(vendor);
+                    setShowAddModal(true);
+                  }}
+                  className="text-indigo-600 hover:text-indigo-800 font-medium px-4 py-1.5 opacity-0 group-hover:opacity-100 transition-opacity bg-indigo-50 rounded-lg"
+                >
                   Edit
                 </button>
               </div>
@@ -66,22 +91,37 @@ export default function Vendors() {
       </div>
 
       {showAddModal && (
-        <AddVendorModal onClose={() => setShowAddModal(false)} />
+        <VendorModal 
+          onClose={() => setShowAddModal(false)} 
+          onSuccess={() => {
+            setShowAddModal(false);
+            fetchVendors(); // Refresh the list
+          }}
+          vendor={editingVendor}
+        />
       )}
     </div>
   );
 }
 
-function AddVendorModal({ onClose }) {
-  const [formData, setFormData] = useState({ name: '', phone: '' });
+function VendorModal({ onClose, onSuccess, vendor }) {
+  const [formData, setFormData] = useState({ 
+    name: vendor ? vendor.name : '', 
+    phone: vendor ? vendor.phone : '' 
+  });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await db.vendors.add(formData);
-      onClose();
+      if (vendor) {
+        await axios.put(`${API_URL}/vendors/${vendor.id}`, formData);
+      } else {
+        await axios.post(`${API_URL}/vendors`, formData);
+      }
+      onSuccess();
     } catch (error) {
-      console.error(error);
+      console.error("Error saving vendor:", error);
+      alert("Failed to save vendor!");
     }
   };
 
@@ -89,7 +129,7 @@ function AddVendorModal({ onClose }) {
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in-95 duration-200">
         <div className="p-6 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-900">Add New Vendor</h2>
+          <h2 className="text-xl font-bold text-gray-900">{vendor ? 'Edit Vendor' : 'Add New Vendor'}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">✕</button>
         </div>
         
@@ -113,7 +153,7 @@ function AddVendorModal({ onClose }) {
               Cancel
             </button>
             <button type="submit" className="px-6 py-2.5 rounded-xl font-medium text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-500/20 transition-all">
-              Save Vendor
+              {vendor ? 'Update Vendor' : 'Save Vendor'}
             </button>
           </div>
         </form>
