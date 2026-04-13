@@ -11,6 +11,8 @@ export default function POS() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  const [lastOrder, setLastOrder] = useState(null);
 
   const [products, setProducts] = useState([]);
   const [inventory, setInventory] = useState([]);
@@ -109,10 +111,29 @@ export default function POS() {
         axios.put(`${API_URL}/inventory/${item.inventoryId}/deduct`, { qty: item.qty })
       ));
 
+      // Save order details for receipt
+      const orderDetails = {
+        items: [...cart],
+        subtotal,
+        discountAmount,
+        total,
+        type: saleType,
+        date: new Date()
+      };
+      
+      setLastOrder(orderDetails);
       setCart([]);
       setShowSuccess(true);
       fetchData(); // Refresh inventory after sale
+      
       setTimeout(() => setShowSuccess(false), 3000);
+      
+      // Trigger receipt print
+      setShowReceipt(true);
+      setTimeout(() => {
+        window.print();
+        setShowReceipt(false);
+      }, 500);
     } catch (error) {
       console.error("Checkout failed:", error);
       alert("Checkout failed. Check console.");
@@ -299,6 +320,56 @@ export default function POS() {
           </button>
         </div>
       </div>
+
+      {/* Hidden Printable Receipt */}
+      {showReceipt && lastOrder && (
+        <div id="printable-receipt" className="bg-white text-black font-mono text-sm max-w-[80mm] mx-auto p-4">
+          <div className="text-center mb-6">
+            <h2 className="text-2xl font-bold mb-1">FlowPOS</h2>
+            <p className="text-xs">123 Main Street, City</p>
+            <p className="text-xs">Tel: 011-2345678</p>
+          </div>
+
+          <div className="border-b border-dashed border-gray-400 pb-2 mb-4">
+            <p>Date: {lastOrder.date.toLocaleString()}</p>
+            <p>Type: {lastOrder.type === 'retail' ? 'Retail' : 'Wholesale'}</p>
+          </div>
+
+          <div className="mb-4 space-y-3">
+            {lastOrder.items.map((item, idx) => (
+              <div key={idx}>
+                <p className="font-bold">{item.name}</p>
+                <div className="flex justify-between text-xs">
+                  <span>{item.qty} x Rs.{(lastOrder.type === 'retail' ? Number(item.retailPrice) : Number(item.wholesalePrice)).toFixed(2)}</span>
+                  <span>Rs.{((parseInt(item.qty) || 0) * (lastOrder.type === 'retail' ? Number(item.retailPrice) : Number(item.wholesalePrice))).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="border-t border-dashed border-gray-400 pt-2 mb-6">
+            <div className="flex justify-between mb-1">
+              <span>Subtotal</span>
+              <span>Rs.{lastOrder.subtotal.toFixed(2)}</span>
+            </div>
+            {lastOrder.discountAmount > 0 && (
+              <div className="flex justify-between mb-1 text-xs">
+                <span>Discount</span>
+                <span>-Rs.{lastOrder.discountAmount.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between font-bold text-lg mt-2 pt-2 border-t border-gray-800">
+              <span>Total</span>
+              <span>Rs.{lastOrder.total.toFixed(2)}</span>
+            </div>
+          </div>
+
+          <div className="text-center text-xs mt-8">
+            <p>Thank you for shopping with us!</p>
+            <p className="mt-1">Please come again</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

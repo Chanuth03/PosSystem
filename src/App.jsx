@@ -4,6 +4,7 @@ import {
   Routes,
   Route,
   NavLink,
+  Navigate,
 } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -14,14 +15,28 @@ import {
   Store,
   Menu,
   X,
+  LogOut,
+  UserCircle
 } from "lucide-react";
 import Dashboard from "./pages/Dashboard";
 import POS from "./pages/POS";
 import Inventory from "./pages/Inventory";
 import Vendors from "./pages/Vendors";
+import Login from "./pages/Login";
+import { AuthContext } from "./context/AuthContext";
+import { useContext } from "react";
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { user, loading, logout } = useContext(AuthContext);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
+
+  if (!user) {
+    return <Login />;
+  }
+
+  const isAdmin = user.role === 'admin';
 
   return (
     <Router>
@@ -74,36 +89,55 @@ function App() {
           </div>
 
           <nav className="flex-1 px-4 space-y-2 mt-4 overflow-y-auto">
-            <NavItem
-              to="/"
-              icon={<LayoutDashboard size={20} />}
-              label="Dashboard"
-              onClick={() => setIsSidebarOpen(false)}
-            />
+            {isAdmin && (
+              <NavItem
+                to="/"
+                icon={<LayoutDashboard size={20} />}
+                label="Dashboard"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
             <NavItem
               to="/pos"
               icon={<ShoppingCart size={20} />}
               label="Point of Sale"
               onClick={() => setIsSidebarOpen(false)}
             />
-            <NavItem
-              to="/inventory"
-              icon={<Package size={20} />}
-              label="Inventory"
-              onClick={() => setIsSidebarOpen(false)}
-            />
-            <NavItem
-              to="/vendors"
-              icon={<Users size={20} />}
-              label="Vendors"
-              onClick={() => setIsSidebarOpen(false)}
-            />
+            {isAdmin && (
+              <>
+                <NavItem
+                  to="/inventory"
+                  icon={<Package size={20} />}
+                  label="Inventory"
+                  onClick={() => setIsSidebarOpen(false)}
+                />
+                <NavItem
+                  to="/vendors"
+                  icon={<Users size={20} />}
+                  label="Vendors"
+                  onClick={() => setIsSidebarOpen(false)}
+                />
+              </>
+            )}
           </nav>
 
-          <div className="p-4 border-t border-gray-100">
-            <div className="flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
-              <Settings size={20} />
-              <span className="font-medium">Settings</span>
+          <div className="p-4 border-t border-gray-100 space-y-2">
+            <div className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 bg-gray-50 rounded-xl mb-2">
+              <UserCircle size={20} className="text-blue-600" />
+              <div>
+                <p className="font-bold capitalize">{user.username}</p>
+                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+              </div>
+            </div>
+            {isAdmin && (
+              <div className="flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+                <Settings size={20} />
+                <span className="font-medium">Settings</span>
+              </div>
+            )}
+            <div onClick={logout} className="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-xl cursor-pointer transition-colors">
+              <LogOut size={20} />
+              <span className="font-medium">Logout</span>
             </div>
           </div>
         </aside>
@@ -111,10 +145,17 @@ function App() {
         {/* Main Content */}
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-slate-50/50">
           <Routes>
-            <Route path="/" element={<Dashboard />} />
             <Route path="/pos" element={<POS />} />
-            <Route path="/inventory" element={<Inventory />} />
-            <Route path="/vendors" element={<Vendors />} />
+            {isAdmin ? (
+              <>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/inventory" element={<Inventory />} />
+                <Route path="/vendors" element={<Vendors />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </>
+            ) : (
+              <Route path="*" element={<Navigate to="/pos" replace />} />
+            )}
           </Routes>
         </main>
       </div>
