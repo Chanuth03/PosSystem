@@ -9,6 +9,9 @@ export default function Inventory() {
   const [inventory, setInventory] = useState([]);
   const [vendors, setVendors] = useState([]);
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
 
@@ -31,6 +34,15 @@ export default function Inventory() {
     fetchData();
   }, []);
 
+  const uniqueCategories = Array.from(new Set(products.map(p => p.category).filter(Boolean)));
+
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory = selectedCategory === '' || p.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
+
   return (
     <div className="p-4 md:p-8 h-full flex flex-col">
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 md:mb-8 gap-4">
@@ -51,19 +63,26 @@ export default function Inventory() {
       </header>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex gap-4">
+      <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-6 flex flex-col sm:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
           <input
             type="text"
-            placeholder="Search products by name or Item Item code..."
+            placeholder="Search products by name or Item code..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 transition-shadow outline-none text-gray-700"
           />
         </div>
-        <button className="flex items-center gap-2 px-6 py-3 bg-gray-50 text-gray-700 rounded-xl hover:bg-gray-100 font-medium transition-colors">
-          <Filter size={20} />
-          Filters
-        </button>
+        <select 
+          value={selectedCategory} 
+          onChange={e => setSelectedCategory(e.target.value)}
+          className="w-full sm:w-48 px-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 transition-shadow outline-none text-gray-700 font-medium appearance-none"
+          style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
+        >
+          <option value="">All Categories</option>
+          {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
       </div>
 
       {/* Table */}
@@ -81,16 +100,16 @@ export default function Inventory() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {products.length === 0 ? (
+              {filteredProducts.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="text-center p-12 text-gray-400">
                     <Box size={48} className="mx-auto mb-4 opacity-50" />
                     <p className="text-lg font-medium">No products found</p>
-                    <p className="text-sm mt-1">Add a new product to get started.</p>
+                    <p className="text-sm mt-1">{searchQuery || selectedCategory ? 'Try adjusting your search or filters.' : 'Add a new product to get started.'}</p>
                   </td>
                 </tr>
               ) : (
-                products.map(p => {
+                filteredProducts.map(p => {
                   const productInventory = inventory.filter(inv => inv.productId === p.id);
                   const totalStock = productInventory.reduce((acc, curr) => acc + curr.stockQty, 0);
 

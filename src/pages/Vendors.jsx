@@ -6,8 +6,14 @@ const API_URL = 'http://localhost:5000/api';
 
 export default function Vendors() {
   const [vendors, setVendors] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingVendor, setEditingVendor] = useState(null);
+
+  const filteredVendors = vendors.filter(v => 
+    v.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    (v.phone && v.phone.includes(searchQuery))
+  );
 
   // Fetch vendors from the backend API
   const fetchVendors = async () => {
@@ -46,20 +52,22 @@ export default function Vendors() {
         <Search className="absolute left-7 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
         <input 
           type="text" 
-          placeholder="Search vendors..." 
+          placeholder="Search vendors by name or phone..." 
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
           className="w-full pl-12 pr-4 py-3 rounded-xl bg-gray-50 border-none focus:ring-2 focus:ring-indigo-500 transition-shadow outline-none text-gray-700" 
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {vendors.length === 0 ? (
+        {filteredVendors.length === 0 ? (
           <div className="col-span-full py-16 text-center bg-white rounded-3xl border border-dashed border-gray-300">
             <Users size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-xl font-bold text-gray-700 mb-1">No Vendors Found</h3>
-            <p className="text-gray-500">Add a vendor to start tracking your suppliers.</p>
+            <p className="text-gray-500">{searchQuery ? 'Try adjusting your search terms.' : 'Add a vendor to start tracking your suppliers.'}</p>
           </div>
         ) : (
-          vendors.map(vendor => (
+          filteredVendors.map(vendor => (
             <div key={vendor.id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-lg transition-shadow group">
               <div className="flex items-start justify-between mb-4">
                 <div className="w-12 h-12 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xl uppercase">
@@ -137,13 +145,13 @@ function VendorModal({ onClose, onSuccess, vendor }) {
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Vendor Name</label>
-              <input required type="text" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
+              <input required type="text" value={formData.name} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
                 onChange={e => setFormData({...formData, name: e.target.value})} />
             </div>
             
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">Phone Number</label>
-              <input required type="tel" className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
+              <input required type="tel" value={formData.phone} className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-indigo-500"
                 onChange={e => setFormData({...formData, phone: e.target.value})} />
             </div>
           </div>

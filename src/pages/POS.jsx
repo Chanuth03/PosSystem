@@ -9,6 +9,7 @@ export default function POS() {
   const [saleType, setSaleType] = useState('retail'); // 'retail' or 'wholesale'
   const [discountPercent, setDiscountPercent] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [showSuccess, setShowSuccess] = useState(false);
 
   const [products, setProducts] = useState([]);
@@ -31,6 +32,11 @@ export default function POS() {
     fetchData();
   }, []);
 
+  const uniqueCategories = useMemo(() => {
+    const cats = new Set(products.map(p => p.category).filter(Boolean));
+    return Array.from(cats);
+  }, [products]);
+
   const inventoryItems = useMemo(() => {
     return inventory.map(inv => {
       const product = products.find(p => p.id === inv.productId) || {};
@@ -40,19 +46,21 @@ export default function POS() {
         sku: product.sku,
         category: product.category
       };
-    }).filter(item =>
-      item.productName &&
-      (item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-       (item.sku && item.sku.toLowerCase().includes(searchQuery.toLowerCase())))
-    );
-  }, [inventory, products, searchQuery]);
+    }).filter(item => {
+      const matchesSearch = item.productName &&
+        (item.productName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+         (item.sku && item.sku.toLowerCase().includes(searchQuery.toLowerCase())));
+      const matchesCategory = selectedCategory === '' || item.category === selectedCategory;
+      return matchesSearch && matchesCategory;
+    });
+  }, [inventory, products, searchQuery, selectedCategory]);
 
   // Cart operations
   const addToCart = (item) => {
     const existing = cart.find(c => c.inventoryId === item.id);
     if (existing) {
-      if (existing.qty >= item.stockQty) return; // Can't add more than stock
-      setCart(cart.map(c => c.inventoryId === item.id ? { ...c, qty: c.qty + 1 } : c));
+      if ((parseInt(existing.qty) || 0) >= item.stockQty) return; // Can't add more than stock
+      setCart(cart.map(c => c.inventoryId === item.id ? { ...c, qty: (parseInt(c.qty) || 0) + 1 } : c));
     } else {
       if (item.stockQty < 1) return;
       setCart([...cart, {
@@ -74,13 +82,14 @@ export default function POS() {
   const updateQty = (inventoryId, newQty) => {
     setCart(cart.map(c => {
       if (c.inventoryId === inventoryId) {
+        if (newQty === '') return { ...c, qty: '' };
         return { ...c, qty: Math.min(Math.max(1, newQty), c.maxQty) };
       }
       return c;
     }));
   };
 
-  const subtotal = cart.reduce((acc, item) => acc + (item.qty * (saleType === 'retail' ? item.retailPrice : item.wholesalePrice)), 0);
+  const subtotal = cart.reduce((acc, item) => acc + ((parseInt(item.qty) || 0) * (saleType === 'retail' ? item.retailPrice : item.wholesalePrice)), 0);
   const discountAmount = (subtotal * discountPercent) / 100;
   const total = subtotal - discountAmount;
 
@@ -134,15 +143,38 @@ export default function POS() {
           </div>
         </header>
 
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-          <input
-            type="text"
-            placeholder="Search catalog by name or Item code..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-gray-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm text-lg transition-all"
-          />
+        <div className="flex flex-col sm:flex-row gap-4 relative">
+          <div className="relative flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
+            <input
+              type="text"
+              placeholder="Search catalog by name or scan barcode..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const matchedItem = inventoryItems.find(item => item.sku && item.sku.toLowerCase() === searchQuery.trim().toLowerCase());
+                  if (matchedItem && matchedItem.stockQty > 0) {
+                    addToCart(matchedItem);
+                    setSearchQuery('');
+                  } else if (inventoryItems.length === 1 && inventoryItems[0].stockQty > 0) {
+                    addToCart(inventoryItems[0]);
+                    setSearchQuery('');
+                  }
+                }
+              }}
+              className="w-full pl-12 pr-4 py-4 rounded-2xl bg-white border border-gray-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm text-lg transition-all"
+            />
+          </div>
+          <select 
+            value={selectedCategory} 
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="w-full sm:w-48 px-4 py-4 rounded-2xl bg-white border border-gray-200 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 shadow-sm text-gray-700 transition-all font-medium appearance-none"
+            style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: 'right 1rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
+          >
+            <option value="">All Categories</option>
+            {uniqueCategories.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
         </div>
 
         <div className="flex-1 overflow-y-auto pb-4">
@@ -195,9 +227,24 @@ export default function POS() {
                   <h4 className="font-bold text-gray-800 text-sm">{item.name}</h4>
                   <p className="text-xs text-gray-500 mb-2">{item.size} • {item.color}</p>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => updateQty(item.inventoryId, item.qty - 1)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center font-bold pb-0.5">-</button>
-                    <span className="text-sm font-semibold w-6 text-center">{item.qty}</span>
-                    <button onClick={() => updateQty(item.inventoryId, item.qty + 1)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center font-bold pb-0.5">+</button>
+                    <button onClick={() => updateQty(item.inventoryId, (parseInt(item.qty) || 0) - 1)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center font-bold pb-0.5">-</button>
+                    <input 
+                      type="number"
+                      min="1"
+                      max={item.maxQty}
+                      value={item.qty}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') updateQty(item.inventoryId, '');
+                        else updateQty(item.inventoryId, parseInt(val));
+                      }}
+                      onBlur={(e) => {
+                         if (!e.target.value || parseInt(e.target.value) < 1) updateQty(item.inventoryId, 1);
+                      }}
+                      className="text-sm font-semibold w-12 text-center bg-gray-50 border border-gray-200 rounded-md outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 py-0.5"
+                      style={{ MozAppearance: 'textfield', WebkitAppearance: 'none' }}
+                    />
+                    <button onClick={() => updateQty(item.inventoryId, (parseInt(item.qty) || 0) + 1)} className="w-6 h-6 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 flex items-center justify-center font-bold pb-0.5">+</button>
                   </div>
                 </div>
                 <div className="flex flex-col items-end justify-between">
@@ -205,7 +252,7 @@ export default function POS() {
                     <Trash2 size={16} />
                   </button>
                   <span className="font-bold text-gray-900">
-                    Rs.{(item.qty * (saleType === 'retail' ? Number(item.retailPrice) : Number(item.wholesalePrice))).toFixed(2)}
+                    Rs.{((parseInt(item.qty) || 0) * (saleType === 'retail' ? Number(item.retailPrice) : Number(item.wholesalePrice))).toFixed(2)}
                   </span>
                 </div>
               </div>

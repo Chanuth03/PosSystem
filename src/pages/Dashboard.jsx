@@ -1,24 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { TrendingUp, AlertTriangle, DollarSign, PackageOpen, ShoppingCart } from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import {
+  TrendingUp,
+  AlertTriangle,
+  DollarSign,
+  PackageOpen,
+  ShoppingCart,
+} from "lucide-react";
 
-const API_URL = 'http://localhost:5000/api';
+const API_URL = "http://localhost:5000/api";
 
 export default function Dashboard() {
   const [sales, setSales] = useState([]);
   const [inventory, setInventory] = useState([]);
+  const [products, setProducts] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [salesRes, invRes] = await Promise.all([
+        const [salesRes, invRes, prodRes] = await Promise.all([
           axios.get(`${API_URL}/sales`),
-          axios.get(`${API_URL}/inventory`)
+          axios.get(`${API_URL}/inventory`),
+          axios.get(`${API_URL}/products`),
         ]);
         setSales(salesRes.data);
         setInventory(invRes.data);
+        setProducts(prodRes.data);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
       }
@@ -26,15 +35,22 @@ export default function Dashboard() {
     fetchData();
   }, []);
 
-  const todaySales = sales.filter(s => new Date(s.date).toDateString() === new Date().toDateString());
-  const dailyRevenue = todaySales.reduce((acc, curr) => acc + Number(curr.totalAmount), 0);
+  const todaySales = sales.filter(
+    (s) => new Date(s.date).toDateString() === new Date().toDateString(),
+  );
+  const dailyRevenue = todaySales.reduce(
+    (acc, curr) => acc + Number(curr.totalAmount),
+    0,
+  );
 
-  const lowStockItems = inventory.filter(item => item.stockQty < 10);
+  const lowStockItems = inventory.filter((item) => item.stockQty < 10);
 
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 h-full">
       <header>
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Overview</h1>
+        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+          Overview
+        </h1>
         <p className="text-gray-500 mt-1">Here's what's happening today.</p>
       </header>
 
@@ -44,16 +60,16 @@ export default function Dashboard() {
           title="Daily Revenue"
           value={`Rs.${dailyRevenue.toFixed(2)}`}
           icon={<DollarSign className="text-emerald-500" size={24} />}
-          trend="+12.5%"
-          trendUp={true}
+          // trend="+12.5%"
+          // trendUp={true}
           bg="bg-emerald-50"
         />
         <StatCard
           title="Total Sales (Today)"
           value={todaySales.length}
           icon={<TrendingUp className="text-blue-500" size={24} />}
-          trend="+5.2%"
-          trendUp={true}
+          // trend="+5.2%"
+          // trendUp={true}
           bg="bg-blue-50"
         />
         <StatCard
@@ -75,7 +91,9 @@ export default function Dashboard() {
         {/* Low Stock Alerts */}
         <div className="col-span-1 lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
-            <h2 className="text-lg font-bold text-gray-800">Low Stock Alerts</h2>
+            <h2 className="text-lg font-bold text-gray-800">
+              Low Stock Alerts
+            </h2>
             <span className="bg-amber-100 text-amber-800 text-xs font-semibold px-2.5 py-1 rounded-full">
               {lowStockItems.length} items
             </span>
@@ -83,11 +101,21 @@ export default function Dashboard() {
           <div className="p-0">
             {lowStockItems.length > 0 ? (
               <ul className="divide-y divide-gray-100">
-                {lowStockItems.slice(0, 5).map(item => (
-                  <li key={item.id} className="p-4 hover:bg-slate-50 transition-colors flex justify-between items-center">
+                {lowStockItems.slice(0, 5).map((item) => {
+                  const product = products.find(p => p.id === item.productId);
+                  return (
+                  <li
+                    key={item.id}
+                    className="p-4 hover:bg-slate-50 transition-colors flex justify-between items-center"
+                  >
                     <div>
-                      <p className="font-semibold text-gray-800">Product #{item.productId}</p>
-                      <p className="text-sm text-gray-500">Size: {item.size} | Color: {item.color}</p>
+                      <p className="font-semibold text-gray-800">
+                        {product ? product.name : `Product #${item.productId}`}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {product ? <span className="mr-2 font-mono text-xs bg-gray-200 px-1.5 py-0.5 rounded text-gray-700">{product.sku}</span> : null}
+                        Size: {item.size} | Color: {item.color}
+                      </p>
                     </div>
                     <div className="text-right">
                       <span className="text-amber-600 font-bold bg-amber-50 px-3 py-1 rounded-full text-sm">
@@ -95,7 +123,7 @@ export default function Dashboard() {
                       </span>
                     </div>
                   </li>
-                ))}
+                )})}
               </ul>
             ) : (
               <div className="p-8 text-center text-gray-500 flex flex-col items-center">
@@ -110,10 +138,12 @@ export default function Dashboard() {
 
         {/* Quick Actions */}
         <div className="col-span-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-800 mb-4">Quick Actions</h2>
+          <h2 className="text-lg font-bold text-gray-800 mb-4">
+            Quick Actions
+          </h2>
           <div className="space-y-3">
-            <button 
-              onClick={() => navigate('/pos')}
+            <button
+              onClick={() => navigate("/pos")}
               className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-blue-50 group transition-all text-blue-700 bg-blue-50/50 font-medium"
             >
               <div className="bg-blue-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
@@ -121,8 +151,8 @@ export default function Dashboard() {
               </div>
               New Sale
             </button>
-            <button 
-              onClick={() => navigate('/inventory')}
+            <button
+              onClick={() => navigate("/inventory")}
               className="w-full flex items-center gap-3 p-3 text-left rounded-xl hover:bg-indigo-50 group transition-all text-indigo-700 bg-indigo-50/50 font-medium"
             >
               <div className="bg-indigo-100 p-2 rounded-lg group-hover:scale-110 transition-transform">
@@ -140,7 +170,9 @@ export default function Dashboard() {
 function StatCard({ title, value, icon, trend, trendUp, subtitle, bg }) {
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-shadow relative overflow-hidden group">
-      <div className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bg} opacity-50 group-hover:scale-150 transition-transform duration-500`} />
+      <div
+        className={`absolute -right-6 -top-6 w-24 h-24 rounded-full ${bg} opacity-50 group-hover:scale-150 transition-transform duration-500`}
+      />
       <div className="relative z-10 flex justify-between">
         <div>
           <p className="text-sm font-medium text-gray-500 mb-1">{title}</p>
@@ -149,15 +181,21 @@ function StatCard({ title, value, icon, trend, trendUp, subtitle, bg }) {
           {(trend || subtitle) && (
             <div className="mt-2 flex items-center gap-2">
               {trend && (
-                <span className={`text-xs font-semibold px-2 py-1 rounded-md ${trendUp ? 'bg-emerald-50 text-emerald-600' : 'bg-red-50 text-red-600'}`}>
+                <span
+                  className={`text-xs font-semibold px-2 py-1 rounded-md ${trendUp ? "bg-emerald-50 text-emerald-600" : "bg-red-50 text-red-600"}`}
+                >
                   {trend}
                 </span>
               )}
-              {subtitle && <span className="text-xs text-gray-500">{subtitle}</span>}
+              {subtitle && (
+                <span className="text-xs text-gray-500">{subtitle}</span>
+              )}
             </div>
           )}
         </div>
-        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg} shadow-sm`}>
+        <div
+          className={`w-12 h-12 rounded-xl flex items-center justify-center ${bg} shadow-sm`}
+        >
           {icon}
         </div>
       </div>
