@@ -1,58 +1,53 @@
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:5000/api';
 
 export const AuthContext = createContext();
 
+const DEFAULT_USERS = [
+  { id: 1, username: 'admin', role: 'admin', lastActive: 'Just now' },
+  { id: 2, username: 'cashier', role: 'cashier', lastActive: '1 hr ago' },
+];
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [activeUser, setActiveUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for token and user
-    const storedToken = localStorage.getItem('flowpos_token');
-    const storedUser = localStorage.getItem('flowpos_user');
-
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
-      // Set default header
-      axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
+    const savedUsers = localStorage.getItem('mock_users');
+    if (savedUsers) {
+      setUsers(JSON.parse(savedUsers));
+    } else {
+      setUsers(DEFAULT_USERS);
+      localStorage.setItem('mock_users', JSON.stringify(DEFAULT_USERS));
     }
+
+    const savedActiveUser = localStorage.getItem('mock_active_user');
+    if (savedActiveUser) {
+      setActiveUser(JSON.parse(savedActiveUser));
+    } else {
+      setActiveUser(DEFAULT_USERS[0]); // Default to admin for now
+      localStorage.setItem('mock_active_user', JSON.stringify(DEFAULT_USERS[0]));
+    }
+    
     setLoading(false);
   }, []);
 
-  const login = async (username, password) => {
-    try {
-      const response = await axios.post(`${API_URL}/auth/login`, { username, password });
-      const { token, user } = response.data;
-      
-      localStorage.setItem('flowpos_token', token);
-      localStorage.setItem('flowpos_user', JSON.stringify(user));
-      
-      setToken(token);
-      setUser(user);
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      return { success: true };
-    } catch (error) {
-      const msg = error.response?.data?.error || "Login failed";
-      return { success: false, error: msg };
+  const saveUsers = (newUsers) => {
+    setUsers(newUsers);
+    localStorage.setItem('mock_users', JSON.stringify(newUsers));
+  };
+
+  const switchUser = (userId) => {
+    const user = users.find(u => u.id === Number(userId));
+    if (user) {
+      setActiveUser(user);
+      localStorage.setItem('mock_active_user', JSON.stringify(user));
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('flowpos_token');
-    localStorage.removeItem('flowpos_user');
-    setToken(null);
-    setUser(null);
-    delete axios.defaults.headers.common['Authorization'];
-  };
-
   return (
-    <AuthContext.Provider value={{ user, token, loading, login, logout }}>
-      {children}
+    <AuthContext.Provider value={{ users, saveUsers, activeUser, switchUser, loading }}>
+      {!loading && children}
     </AuthContext.Provider>
   );
 };

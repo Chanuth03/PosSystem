@@ -23,20 +23,31 @@ import POS from "./pages/POS";
 import Inventory from "./pages/Inventory";
 import Vendors from "./pages/Vendors";
 import Login from "./pages/Login";
+import SettingsPage from "./pages/Settings";
 import { AuthContext } from "./context/AuthContext";
 import { useContext } from "react";
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const { user, loading, logout } = useContext(AuthContext);
+  const { activeUser, users, switchUser, loading } = useContext(AuthContext);
 
   if (loading) return <div className="min-h-screen flex items-center justify-center bg-gray-50">Loading...</div>;
 
-  if (!user) {
-    return <Login />;
-  }
+  const isAdmin = activeUser && activeUser.role === 'admin';
 
-  const isAdmin = user.role === 'admin';
+  const handleUserSwitch = (targetId) => {
+    const targetUser = users.find(u => u.id === Number(targetId));
+    if (targetUser && targetUser.role === 'admin' && activeUser?.role !== 'admin') {
+      const pwd = window.prompt("Enter Admin Password:");
+      if (pwd === "Admin@1234") {
+        switchUser(targetId);
+      } else {
+        alert("Incorrect password!");
+      }
+    } else {
+      switchUser(targetId);
+    }
+  };
 
   return (
     <Router>
@@ -123,22 +134,29 @@ function App() {
 
           <div className="p-4 border-t border-gray-100 space-y-2">
             <div className="flex items-center gap-3 px-4 py-3 text-sm text-gray-700 bg-gray-50 rounded-xl mb-2">
-              <UserCircle size={20} className="text-blue-600" />
-              <div>
-                <p className="font-bold capitalize">{user.username}</p>
-                <p className="text-xs text-gray-500 capitalize">{user.role}</p>
+              <UserCircle size={20} className="text-blue-600 shrink-0" />
+              <div className="flex-1 w-full overflow-hidden relative">
+                <select 
+                  className="w-full bg-transparent font-bold capitalize text-gray-900 outline-none cursor-pointer appearance-none relative z-10 pr-6"
+                  value={activeUser.id}
+                  onChange={(e) => handleUserSwitch(e.target.value)}
+                >
+                  {users.map(u => (
+                    <option key={u.id} value={u.id}>{u.username} ({u.role})</option>
+                  ))}
+                </select>
+                <div className="absolute right-0 top-1 text-gray-400 pointer-events-none">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                </div>
+                <p className="text-xs text-gray-500 capitalize">{activeUser.role}</p>
               </div>
             </div>
             {isAdmin && (
-              <div className="flex items-center gap-3 px-4 py-3 text-sm text-gray-600 hover:bg-gray-50 rounded-xl cursor-pointer transition-colors">
+              <NavLink to="/settings" onClick={() => setIsSidebarOpen(false)} className={({ isActive }) => `flex items-center gap-3 px-4 py-3 text-sm rounded-xl cursor-pointer transition-colors ${isActive ? "bg-blue-50 text-blue-700 font-semibold shadow-sm" : "text-gray-600 hover:bg-gray-50 font-medium"}`}>
                 <Settings size={20} />
-                <span className="font-medium">Settings</span>
-              </div>
+                <span>Settings</span>
+              </NavLink>
             )}
-            <div onClick={logout} className="flex items-center gap-3 px-4 py-3 text-sm text-red-600 hover:bg-red-50 rounded-xl cursor-pointer transition-colors">
-              <LogOut size={20} />
-              <span className="font-medium">Logout</span>
-            </div>
           </div>
         </aside>
 
@@ -151,6 +169,7 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/inventory" element={<Inventory />} />
                 <Route path="/vendors" element={<Vendors />} />
+                <Route path="/settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </>
             ) : (
