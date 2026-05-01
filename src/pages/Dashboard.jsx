@@ -7,6 +7,8 @@ import {
   DollarSign,
   PackageOpen,
   ShoppingCart,
+  Sparkles,
+  Lightbulb
 } from "lucide-react";
 
 const API_URL = "http://localhost:5000/api";
@@ -15,6 +17,8 @@ export default function Dashboard() {
   const [sales, setSales] = useState([]);
   const [inventory, setInventory] = useState([]);
   const [products, setProducts] = useState([]);
+  const [aiInsights, setAiInsights] = useState([]);
+  const [loadingInsights, setLoadingInsights] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -32,7 +36,29 @@ export default function Dashboard() {
         console.error("Error fetching dashboard data:", error);
       }
     };
+
+    const fetchInsights = async () => {
+      try {
+        setLoadingInsights(true);
+        const res = await axios.get(`${API_URL}/ai/insights`);
+        setAiInsights(res.data);
+      } catch (error) {
+        console.error("Error fetching AI insights:", error);
+        setAiInsights([
+          {
+            id: 'error',
+            type: 'warning',
+            title: 'AI Unavailable',
+            message: 'Failed to generate AI insights. Make sure GEMINI_API_KEY is configured in the backend.'
+          }
+        ]);
+      } finally {
+        setLoadingInsights(false);
+      }
+    };
+
     fetchData();
+    fetchInsights();
   }, []);
 
   const todaySales = sales.filter(
@@ -45,6 +71,24 @@ export default function Dashboard() {
 
   const lowStockItems = inventory.filter((item) => item.stockQty < 10);
 
+  const getInsightIcon = (type) => {
+    switch (type) {
+      case 'warning': return <AlertTriangle className="text-amber-500 mt-1" size={20} />;
+      case 'suggestion': return <Lightbulb className="text-blue-500 mt-1" size={20} />;
+      case 'success': return <DollarSign className="text-emerald-500 mt-1" size={20} />;
+      default: return <Sparkles className="text-indigo-500 mt-1" size={20} />;
+    }
+  };
+
+  const getInsightBorder = (type) => {
+    switch (type) {
+      case 'warning': return "border-amber-200";
+      case 'suggestion': return "border-blue-200";
+      case 'success': return "border-emerald-200";
+      default: return "border-indigo-200";
+    }
+  };
+
   return (
     <div className="p-4 md:p-8 space-y-6 md:space-y-8 h-full">
       <header>
@@ -53,6 +97,55 @@ export default function Dashboard() {
         </h1>
         <p className="text-gray-500 mt-1">Here's what's happening today.</p>
       </header>
+
+      {/* AI Insights Section */}
+      <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl shadow-xl border border-indigo-500/20 p-6 relative overflow-hidden group">
+        {/* Background Decorative Elements */}
+        <div className="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl group-hover:bg-indigo-500/30 transition-colors duration-700"></div>
+        <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl group-hover:bg-purple-500/30 transition-colors duration-700"></div>
+        
+        <div className="relative z-10">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-500/20 p-2.5 rounded-xl backdrop-blur-md border border-indigo-500/30">
+                <Sparkles className="text-indigo-300" size={24} />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                  AI Predictive Analytics
+                  <span className="bg-indigo-500/30 text-indigo-200 text-[10px] uppercase tracking-wider font-bold px-2 py-0.5 rounded-full border border-indigo-400/30">
+                    Beta
+                  </span>
+                </h2>
+                <p className="text-indigo-200/60 text-sm mt-0.5">Powered by your store's data</p>
+              </div>
+            </div>
+          </div>
+          
+          {loadingInsights ? (
+            <div className="flex justify-center items-center py-8">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+               <span className="ml-3 text-white">AI is analyzing your store data...</span>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {aiInsights.map((insight, index) => (
+                <div key={insight.id || index} className={`bg-white/95 backdrop-blur-md rounded-2xl p-5 border shadow-sm flex gap-4 ${getInsightBorder(insight.type)} hover:-translate-y-1 transition-all duration-300 hover:shadow-lg`}>
+                  <div className="flex-shrink-0 bg-white p-2 rounded-xl shadow-sm border border-gray-100 h-fit">
+                    {getInsightIcon(insight.type)}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 text-sm mb-1.5">{insight.title}</h3>
+                    <p className="text-gray-600 text-sm leading-relaxed">
+                      {insight.message}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
